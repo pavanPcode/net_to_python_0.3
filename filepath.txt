@@ -1,0 +1,4 @@
+file path = C:\Users\saipa\Downloads\Anpr_testing_img
+count = 20
+log_path = C:\Users\saipa\Pictures\Saved Pictures
+port = 3333
