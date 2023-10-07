@@ -176,12 +176,12 @@ def getprevtransactionByvehicleNumber():
                        "machineId": None, "numberPlateImage": None, "numberPlateImageb64": None, "vehicleImage": None,
                        "vehicleImageb64": None}
 
-        if refno != '':
-            if  vehicleNumber:
-                #return getprevtransactionByvehicleNumberQaury.format(vehicleNumber)
-                item = GetPrevTransactionDetails(getprevtransactionByvehicleNumberQaury.format(vehicleNumber))
-            elif vehicleLast4digits:
-                item = GetPrevTransactionDetails(getprevtransactionByvehicleNumberLast4digitsQaury.format(vehicleLast4digits))
+        #if refno != '':
+        if  vehicleNumber:
+            #return getprevtransactionByvehicleNumberQaury.format(vehicleNumber)
+            item = GetPrevTransactionDetails(getprevtransactionByvehicleNumberQaury.format(vehicleNumber))
+        elif vehicleLast4digits:
+            item = GetPrevTransactionDetails(getprevtransactionByvehicleNumberLast4digitsQaury.format(vehicleLast4digits))
 
 
         else:
