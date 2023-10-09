@@ -48,7 +48,7 @@ def get_vehicle_last_transactions():
         output_model['vehicleImageb64'] = utilitys.convert_image_to_base64(item['vehicleImage'])
         output_model['deviceId'] = item['deviceId']
         output_model['cardId'] = item['cardId']
-        output_model['dateOfTransaction'] = item['dateOfTransaction']
+        output_model['dateOfTransaction'] = item['dateOfTransaction'].strftime("%Y-%m-%dT%H:%M:%S")
     else:
         # Handle the case where item is None
         return {"id":0,"machineId":0,"deviceId":None,
@@ -152,6 +152,7 @@ def get_prev_vehicle_transactions():
     output_model = models.VehicleOutput()
     try:
         item = GetPrevTransactionDetails(GetPrevTransactionDetailsquary)
+        item['dateOfTransaction'] = item['dateOfTransaction'].strftime("%Y-%m-%dT%H:%M:%S")
         item['numberPlateImageb64'] = utilitys.convert_image_to_base64(item['numberPlateImage'])
         item['vehicleImageb64'] = utilitys.convert_image_to_base64(item['vehicleImage'])
 
@@ -161,13 +162,19 @@ def get_prev_vehicle_transactions():
         return jsonify(output_model.__dict__), 400
 
 
-@app.route('/api/vehicle/getprevtransactionByvehicleNumber', methods=['GET'])
+@app.route('/api/vehicle/getprevtransactionByvehicleNumber', methods=['POST'])
 def getprevtransactionByvehicleNumber():
     output_model = models.VehicleOutput()
     try:
-        vehicleNumber = request.args.get('vehicleNumber')
-        vehicleLast4digits = request.args.get('vehicleLast4digits')
-        refno = request.args.get('refno')
+        data = request.json
+
+        # vehicleNumber = request.args.get('vehicleNumber')
+        # vehicleLast4digits = request.args.get('vehicleLast4digits')
+        # refno = request.args.get('refno')
+
+        vehicleNumber = data['vehicleNumber']
+        vehicleLast4digits = data['vehicleLast4digits']
+        refno = data['refno']
 
         insertInRefTable = InsertRefRecord(insertRefTableRecord.format(vehicleNumber,vehicleLast4digits,refno))
 
@@ -176,7 +183,8 @@ def getprevtransactionByvehicleNumber():
                        "machineId": None, "numberPlateImage": None, "numberPlateImageb64": None, "vehicleImage": None,
                        "vehicleImageb64": None}
 
-        #if refno != '':
+        if refno != '':
+            nodatafound
         if  vehicleNumber:
             #return getprevtransactionByvehicleNumberQaury.format(vehicleNumber)
             item = GetPrevTransactionDetails(getprevtransactionByvehicleNumberQaury.format(vehicleNumber))
@@ -190,10 +198,13 @@ def getprevtransactionByvehicleNumber():
         if item == {}:
             return nodatafound
 
+        item['dateOfTransaction'] = item['dateOfTransaction'].strftime("%Y-%m-%dT%H:%M:%S")
         item['numberPlateImageb64'] = utilitys.convert_image_to_base64(item['numberPlateImage'])
         item['vehicleImageb64'] = utilitys.convert_image_to_base64(item['vehicleImage'])
 
         updateRedtableRecord(updateRefTableRecordquary.format(insertInRefTable))
+
+
 
         return item
     except Exception as ex:
