@@ -11,8 +11,7 @@ import utilitys
 import socket
 import logging
 import sys
-from all_sql_quarys import updateRefTableRecordquary,GetPrevTransactionDetailsquary,getprevtransactionByvehicleNumberLast4digitsQaury,getprevtransactionByvehicleNumberQaury,insertRefTableRecord
-
+from all_sql_quarys import *
 app = Flask(__name__)
 
 port_num = 5000
@@ -162,8 +161,10 @@ def get_prev_vehicle_transactions():
         return jsonify(output_model.__dict__), 400
 
 
-@app.route('/api/vehicle/getprevtransactionByvehicleNumber', methods=['POST'])
-def getprevtransactionByvehicleNumber():
+
+
+@app.route('/api/vehicle/RequestLastVehicleDetails', methods=['POST'])
+def RequestLastVehicleDetails():
     output_model = models.VehicleOutput()
     try:
         data = request.json
@@ -171,6 +172,8 @@ def getprevtransactionByvehicleNumber():
         # vehicleNumber = request.args.get('vehicleNumber')
         # vehicleLast4digits = request.args.get('vehicleLast4digits')
         # refno = request.args.get('refno')
+
+        #postStatus  1 . created ,1.notsend--but found,2.send succesfully
 
         vehicleNumber = data['vehicleNumber']
         vehicleLast4digits = data['vehicleLast4digits']
@@ -182,12 +185,12 @@ def getprevtransactionByvehicleNumber():
                        "last_four_digits": vehicleLast4digits,
                        "machineId": None, "numberPlateImage": None, "numberPlateImageb64": None, "vehicleImage": None,
                        "vehicleImageb64": None}
-
         if refno != '':
             nodatafound
         if  vehicleNumber:
             #return getprevtransactionByvehicleNumberQaury.format(vehicleNumber)
             item = GetPrevTransactionDetails(getprevtransactionByvehicleNumberQaury.format(vehicleNumber))
+            print(item)
         elif vehicleLast4digits:
             item = GetPrevTransactionDetails(getprevtransactionByvehicleNumberLast4digitsQaury.format(vehicleLast4digits))
 
@@ -202,9 +205,7 @@ def getprevtransactionByvehicleNumber():
         item['numberPlateImageb64'] = utilitys.convert_image_to_base64(item['numberPlateImage'])
         item['vehicleImageb64'] = utilitys.convert_image_to_base64(item['vehicleImage'])
 
-        updateRedtableRecord(updateRefTableRecordquary.format(insertInRefTable))
-
-
+        updateRedtableRecord(updateRefTableRecordquary.format(insertInRefTable,item['id']))
 
         return item
     except Exception as ex:
@@ -212,6 +213,37 @@ def getprevtransactionByvehicleNumber():
         return jsonify(nodatafound), 400
 
 
+@app.route('/api/vehicle/getLastTramsactionsByVehicle')
+def getLastTramsactionsByVehicle():
+    output_model = models.VehicleOutput()
+    try:
+        # vehicleNumber = request.args.get('vehicleNumber')
+        # vehicleLast4digits = request.args.get('vehicleLast4digits')
+        refno = request.args.get('refno')
+
+        #postStatus  1 . created ,1.notsend--but found,2.send succesfully
+
+
+        nodatafound = {"cardId": 0, "dateOfTransaction": "0001-01-01T00:00:00", "deviceId": None, "id": 0,
+                       "machineId": None, "numberPlateImage": None, "numberPlateImageb64": None, "vehicleImage": None,
+                       "vehicleImageb64": None}
+        if refno != '':
+            nodatafound
+
+        item = GetPrevTransactionDetails(getprevtransactionByRefNoQaury.format(refno))
+
+
+        if item == {}:
+            return nodatafound
+
+        item['dateOfTransaction'] = item['dateOfTransaction'].strftime("%Y-%m-%dT%H:%M:%S")
+        item['numberPlateImageb64'] = utilitys.convert_image_to_base64(item['numberPlateImage'])
+        item['vehicleImageb64'] = utilitys.convert_image_to_base64(item['vehicleImage'])
+        return item
+
+    except Exception as ex:
+        #output_model.error = str(ex)
+        return jsonify(nodatafound), 400
 
 
 def get_ip_address():
@@ -232,8 +264,6 @@ ip_address = get_ip_address()
 
 
 
-
-
 if __name__ == '__main__':
-    app.run(host=ip_address,port=port_num)
+    app.run(host=ip_address,port=port_num,debug=True)
 
