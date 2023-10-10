@@ -213,7 +213,7 @@ def RequestLastVehicleDetails():
         return jsonify(nodatafound), 400
 
 
-@app.route('/api/vehicle/getLastTramsactionsByVehicle')
+@app.route('/api/vehicle/getLastTransactionsByVehicle')
 def getLastTramsactionsByVehicle():
     output_model = models.VehicleOutput()
     try:
