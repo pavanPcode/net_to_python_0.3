@@ -44,7 +44,7 @@ order by DateOfTransaction desc
 limit 1;"""
 
 
-insertRefTableRecord = """INSERT INTO vehicleRefNumber (vehicleNumber, vehicleLast4digits, refno, isfind,postStatus)
-VALUES ('{0}', '{1}', '{2}', 0,1);"""
+insertRefTableRecord = """INSERT INTO RequestVehicle (refno, RefNoDatetime,RefStatus,isActive)
+VALUES ('{0}', CURRENT_TIMESTAMP,1,1);"""
 
 updateRefTableRecordquary = """update vehicleRefNumber set isfind = 1,vehicletransactionId = {1},postStatus = 2 where id = {0}"""
