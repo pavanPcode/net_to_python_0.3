@@ -30,7 +30,7 @@ vti.VehicleImage vehicleImage, vti.VehicleImage numberPlateImage,'' numberPlateI
 SUBSTRING(VehiclePlateNo, -4) AS last_four_digits
 FROM VehicleTransaction vt
 INNER JOIN VehicleTransactionImage vti ON vt.id = vti.VehicleTransactionId
- where DateOfTransaction >= DATE_SUB(NOW(), INTERVAL 500000 MINUTE) and CardId = '{0}' 
+ where DateOfTransaction >= DATE_SUB(NOW(), INTERVAL 5 MINUTE) and CardId = '{0}' 
 order by DateOfTransaction desc
 limit 1;"""
 
