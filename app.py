@@ -98,6 +98,7 @@ def get_vehicle_last_transactions():
 #############test##########
 @app.route('/uploadtest', methods=['POST'])
 def upload():
+    print(request.form,'files',request.files)
     # Get data from form fields
     gm_transaction_id = request.form.get('gm_transaction_id')
     vehicle_numberplate_b64 = request.form.get('vehicle_numberplate_b64')
@@ -110,6 +111,7 @@ def upload():
     # Get the uploaded file
     vehicle_numberplate = request.files['vehicle_numberplate']
     vehicle_image = request.files['vehicle_image']
+    print(cardId)
 
     return "suss"
 
