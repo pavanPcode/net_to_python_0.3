@@ -21,6 +21,9 @@ if 'log_path' in txt_data:
     log_path = txt_data['log_path']
 if 'port' in txt_data:
     port_num = txt_data['port']
+if 'host' in txt_data:
+    host_add = txt_data['host']
+
 
 
 # Redirect Flask's output to a file
@@ -28,9 +31,44 @@ log_file = open(rf"{log_path}\flask_log.txt", "w")
 sys.stdout = log_file
 sys.stderr = log_file
 
+#############################################################################################################################################
+
+
+@app.route('/api/Vehicle/gettransactionintimespan', methods=['GET'])
+def gettransactionintimespan():
+    time_span_in_seconds = int(request.args.get('TimeSpaninSeconds'))
+
+    item,status_code  = dbgetlasttransaction(time_span_in_seconds)
+    #return item
+    output_model = {}
+
+    if item is not None and status_code  ==  200:
+        output_model['id'] = item['id']
+        output_model['machineId'] = item.get('machineId', 0)
+        output_model['numberPlateImage'] = item['numberPlateImage']
+        output_model['vehicleImage'] = item['vehicleImage']
+        output_model['numberPlateImageb64'] = utilitys.convert_image_to_base64(item['numberPlateImage'])
+        output_model['vehicleImageb64'] = utilitys.convert_image_to_base64(item['vehicleImage'])
+        output_model['deviceId'] = item['deviceId']
+        output_model['cardId'] = item['cardId']
+        output_model['dateOfTransaction'] = item['dateOfTransaction'].strftime("%Y-%m-%dT%H:%M:%S")
+    else:
+        # Handle the case where item is None
+        return {"id":0,"machineId":0,"deviceId":None,
+                "cardId":None,"dateOfTransaction":"0001-01-01T00:00:00","vehicleImage":None,"numberPlateImage":None,
+                "numberPlateImageb64":None,"vehicleImageb64":None}
+
+    return jsonify(output_model), 200 if item else 400
+
+
+
+
+
+
+
 ############################################################################################################################################
 
-@app.route('/api/vehicle/getlasttransaction', methods=['GET'])
+@app.route('/api/Vehicle/getlasttransaction', methods=['GET'])
 def get_vehicle_last_transactions():
     time_span_in_seconds = int(request.args.get('TimeSpaninSeconds'))
 
@@ -73,7 +111,6 @@ def upload():
     vehicle_numberplate = request.files['vehicle_numberplate']
     vehicle_image = request.files['vehicle_image']
 
-
     return "suss"
 
 ########################
@@ -98,27 +135,30 @@ def deleteAnprVehicleImage():
 
 
 
-
+#http://192.168.0.111:8020/api/vehicle/onpremisetransaction
 @app.route('/api/vehicle/onpremiseouttransaction', methods=['POST'])
 def onpremiseouttransaction():
-    res = models.ResultStringModel()
+    #res = models.ResultStringModel()
     vehNumber = request.form["vehicle_number"]
+
     imageOperations = models.ImageOperations()
 
     if not imageOperations.IsBase64(request.form["number_plate"]) or not imageOperations.IsBase64(request.form["vehicle_image"]):
-        res.message = "succ"
-        return jsonify(res.__dict__)
+        #res.message = "succ"
+        #return jsonify(res._dict_)
+        return jsonify({"message":"succ"})
 
     if not (8 <= len(vehNumber) <= 12) or (not vehNumber[0].isalpha() or vehNumber.isalpha()):
-        res.message = "succ"
-        return jsonify(res.__dict__)
+        # res.message = "succ"
+        # return jsonify(res)
+        return jsonify({"message": "succ"})
 
     item = {
         "SuperId": 10000,
         "MachineId": 1,
         "DeviceId": request.form["device_name"],
         "CardId": vehNumber,
-        "DateOfTransaction": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "DateOfTransaction": request.form["visited_datetime"],
         "Status": 2,
         "IsActive": True,
         "IsPushed": True,
@@ -148,7 +188,14 @@ def onpremiseouttransaction():
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     fileUpload = models.FileUpload()
-    timestamp = datetime.now().strftime("%Y-%m-%d%H%M")
+    #print(item.DateOfTransaction)
+
+    datetime_obj = datetime.strptime(item["DateOfTransaction"], "%Y-%m-%d %H:%M:%S")
+
+    # Format the datetime object into the desired format
+    timestamp = datetime_obj.strftime("%Y-%m-%d%H%M")
+    #timestamp = datetime.strptime(item["DateOfTransaction"], "%Y-%m-%d%H:%M")
+    #timestamp = (item.DateOfTransaction).strftime("%Y-%m-%d%H%M")
 
     # Save the number plate image
     fileUpload.FileName = f"NP_{result}_{timestamp}.jpg"
@@ -164,10 +211,11 @@ def onpremiseouttransaction():
     #insert_images(itemImage)
     insert_images(itemImage)
 
-    res.message = "succ"
-    return jsonify(res.__dict__)
+    # res.message = "succ"
+    # return jsonify(res._dict_)
+    return jsonify({"message": "succ"})
 
-@app.route('/api/vehicle/getprevtransaction', methods=['GET'])
+@app.route('/api/Vehicle/getprevtransaction', methods=['GET'])
 def get_prev_vehicle_transactions():
     output_model = models.VehicleOutput()
     try:
@@ -191,7 +239,7 @@ def get_prev_vehicle_transactions():
 
 
 
-@app.route('/api/vehicle/RequestLastVehicleDetails', methods=['POST'])
+@app.route('/api/Vehicle/requestlastvehicledetails', methods=['POST'])
 def RequestLastVehicleDetails():
     output_model = models.VehicleOutput()
     try:
@@ -244,7 +292,7 @@ def RequestLastVehicleDetails():
         return jsonify(nodatafound), 400
 
 
-@app.route('/api/vehicle/getLastTransactionsByVehicle')
+@app.route('/api/Vehicle/getLastTransactionsByVehicle')
 def getLastTramsactionsByVehicle():
     output_model = models.VehicleOutput()
     try:
@@ -276,25 +324,25 @@ def getLastTramsactionsByVehicle():
         #output_model.error = str(ex)
         return jsonify(nodatafound), 400
 
-
-def get_ip_address():
-    try:
-        # Create a socket object and connect to a remote host (e.g., Google's DNS server)
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip_address = s.getsockname()[0]
-        s.close()
-        return ip_address
-    except Exception as e:
-        print(f"Error getting IP address: {str(e)}")
-        return "127.0.0.1"  # Default to localhost if an error occurs
-
-# Use the system's IP address as the host
-ip_address = get_ip_address()
+#
+# def get_ip_address():
+#     try:
+#         # Create a socket object and connect to a remote host (e.g., Google's DNS server)
+#         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#         s.connect(("8.8.8.8", 80))
+#         ip_address = s.getsockname()[0]
+#         s.close()
+#         return ip_address
+#     except Exception as e:
+#         print(f"Error getting IP address: {str(e)}")
+#         return "127.0.0.1"  # Default to localhost if an error occurs
+#
+# # Use the system's IP address as the host
+# ip_address = get_ip_address()
 
 
 
 
 if __name__ == '__main__':
-    app.run(host=ip_address,port=port_num)
+    app.run(host=host_add,port=port_num)
 
