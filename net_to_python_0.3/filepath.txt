@@ -1,0 +1,5 @@
+file path = C:\Users\saipa\Downloads\Anpr_testing_img
+count = 10
+log_path = C:\Users\saipa\Downloads
+port = 5001
+host= 192.168.1.10

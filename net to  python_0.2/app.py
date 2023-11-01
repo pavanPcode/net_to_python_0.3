@@ -112,6 +112,7 @@ def upload():
     vehicle_numberplate = request.files['vehicle_numberplate']
     vehicle_image = request.files['vehicle_image']
     print(cardId)
+    print(plate_path)
 
     return "suss"
 

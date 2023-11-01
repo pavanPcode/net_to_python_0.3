@@ -1,0 +1,30 @@
+<html>
+<head>
+
+</head>
+<body>
+
+    <script>const webSocketUrl = 'ws://admin:intozi@123@192.168.9.63/live';
+    const client = new WebSocket(webSocketUrl);
+    console.log(client)
+      client.onerror = (e) => console.error(e);
+
+      client.onopen = () => {
+        // console.log("ws opened");
+        client.send("ping");
+      };
+
+      client.onclose = () => {
+       console.log("ws closed by server");
+      }
+	   client.onmessage = (message) => {
+         console.log("received message", message.data);
+        // const blob = new Blob([message.data]);
+        const srcBlob = URL.createObjectURL(message.data);
+		var img = document.getElementById('img-websocket');
+		img.src = srcBlob
+        // console.log(srcBlob);
+        }</script>
+    <img id="img-websocket" />
+</body>
+</html>
