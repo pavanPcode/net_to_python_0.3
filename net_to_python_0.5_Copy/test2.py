@@ -10,7 +10,6 @@ import numpy as np
 def fetch_and_display_stream(url):
     # Open the video stream
     cap = cv2.VideoCapture(url)
-
     # Check if the stream is opened successfully
     if not cap.isOpened():
         text.insert(tk.END, "Failed to open the stream.")
