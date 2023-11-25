@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Video Stream</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+</head>
+<body>
+    <h1>Live Video Stream</h1>
+    <img id="video" src="" width="800" height="600">
+    <br>
+    <button id="save-button">Save Image</button>
+    <a id="download-link" style="display: none;" download="captured_image.jpg">Download Image</a>
+    <script type="text/javascript">
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var video = document.getElementById('video');
+        var saveButton = document.getElementById('save-button');
+        var downloadLink = document.getElementById('download-link');
+        var capturedImageBase64 = null;
+
+        socket.on('frame', function(frame_base64) {
+            video.src = 'data:image/jpeg;base64,' + frame_base64;
+        });
+
+        saveButton.addEventListener('click', function() {
+            // Capture the current video frame and set it as capturedImageBase64
+            capturedImageBase64 = video.src.split(',')[1];
+
+            // Display the download link
+            downloadLink.style.display = 'block';
+
+            // Send the captured image to the server to save it
+            fetch('/save_image', {
+                method: 'POST',
+                body: JSON.stringify({ image_base64: capturedImageBase64 }),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.text())
+            .then(data => {
+                if (data === 'Image saved successfully') {
+                    alert('Image saved successfully');
+                } else {
+                    alert('Failed to save image');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

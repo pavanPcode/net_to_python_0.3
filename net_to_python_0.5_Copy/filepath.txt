@@ -1,0 +1,7 @@
+file path = C:\Users\saipa\Downloads\Anpr_testing_img
+count = 10
+log_path = C:\Users\saipa\Downloads\Anpr_testing_img
+port = 5001
+host= 192.168.1.9
+templatefolder = D:\Production_Python\Anpt_.net_to_python_service\net_to_python_0.5_Copy\templates
+rtsp_url = rtsp://admin:intozi@123@192.168.0.63/live

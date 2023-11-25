@@ -1,7 +1,7 @@
 import os
 # import base64
-from datetime import datetime
-from flask import Flask, request, jsonify,render_template,send_from_directory
+from flask import Flask, Response, render_template, request, redirect, url_for, send_from_directory,jsonify
+
 # from werkzeug.utils import secure_filename
 #from db_mssql import insert_data_VehicleTransaction,insert_images,delete_old_records,GetPrevTransactionDetails,dbgetlasttransaction
 #import db_mysql
@@ -12,7 +12,7 @@ import socket
 import logging
 import sys
 from all_sql_quarys import *
-app = Flask(__name__)
+import cv2
 
 
 
@@ -27,6 +27,19 @@ if 'host' in txt_data:
     host_add = txt_data['host']
 if 'templatefolder' in txt_data:
     templatefolder = txt_data['templatefolder']
+if 'file path' in txt_data:
+    file_path = txt_data['file path']
+if 'rtsp_url' in txt_data:
+    rtsp_url = txt_data['rtsp_url']
+
+dir_name = file_path
+
+
+
+
+
+app = Flask(__name__,template_folder=templatefolder)
+
 
 
 
@@ -37,11 +50,192 @@ sys.stderr = log_file
 
 #############################################################################################################################################
 
+# @app.route('/')
+# def index():
+#     # You can pass data to the template as keyword arguments
+#
+#     return send_from_directory(templatefolder,'livefeed.html')
+
+#####################################################################################################################
+
+
+
+
+
+# Function to capture frames from the RTSP stream
+def generate_frames():
+    cap = cv2.VideoCapture(rtsp_url)
+
+    while True:
+        success, frame = cap.read()
+        if not success:
+            break
+
+        new_width = 680  # Specify the desired width
+        new_height = 540  # Specify the desired height
+        frame = cv2.resize(frame, (new_width, new_height))
+
+        ret, buffer = cv2.imencode('.jpg', frame)
+        if not ret:
+            break
+
+        frame_bytes = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+    cap.release()
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+# @app.route('/capture')
+# def capture():
+#     # Capture an image
+#     cap = cv2.VideoCapture(rtsp_url)
+#     ret, frame = cap.read()
+#     cap.release()
+#
+#     if ret:
+#         # Generate a unique filename based on the timestamp
+#         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+#         filename = os.path.join(dir_name, f"captured_{timestamp}.jpg")
+#
+#         print(frame)
+#
+#         ## Save the captured image
+#         # cv2.imwrite(filename, frame)
+#
+#     return redirect(url_for('index'))
+
+
+
+@app.route('/capture')
+def capture():
+    # Capture an image
+    cap = cv2.VideoCapture(rtsp_url)
+    ret, frame = cap.read()
+    # Check if the image was captured successfully
+    if ret:
+        print("Image captured successfully")
+        #pass
+    else:
+        return "Failed to capture image"
+    cap.release()
+
+    if ret:
+        # Generate a unique filename based on the timestamp
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        ######################################################################
+        #----------------------------------------------------------------------------------------
+        datetime_obj = datetime.strptime(str(datetime.now()), "%Y-%m-%d %H:%M:%S")
+        # Format the datetime object into the desired format
+        timestamp = datetime_obj.strftime("%Y-%m-%d%H%M")
+        # timestamp = datetime.strptime(item["DateOfTransaction"], "%Y-%m-%d%H:%M")
+        # timestamp = (item.DateOfTransaction).strftime("%Y-%m-%d%H%M")
+
+        # Save the number plate image
+        FileName = f"NP_{result}_{timestamp}.jpg"
+
+        #-----------------------------------------------------------------------------------------------
+
+
+
+        NumberPlateImage = os.path.join(dir_name, f"unknown_{timestamp}.jpg")
+        VehicleImage = os.path.join(dir_name, f"unknown_{timestamp}.jpg")
+
+
+        # Save the captured image
+        num_img = cv2.imwrite(NumberPlateImage, frame)
+        veh_img = cv2.imwrite(VehicleImage, frame)
+
+        if num_img == True and veh_img == True:
+            item = {
+                "SuperId": 10000,
+                "MachineId": 1,
+                "DeviceId": "ANPR",
+                "CardId": "Unknown0123",
+                "DateOfTransaction": str(datetime.now()),
+                "Status": 2,
+                "IsActive": True,
+                "IsPushed": True,
+                "VehiclePlateNo": "Unknown0123",
+                "iscaptured" : 1
+            }
+
+            # result = insert_data_into_sql_server(item)
+            result = insert_data_VehicleTransaction(item)
+
+            # itemImage = {
+            #     "VehicleTransactionId": result
+            # }
+
+            # # Open the text file containing the file path
+            # with open('filepath.txt', 'r') as file:
+            #     # Read the file path from the text file
+            #     UPLOAD_FOLDER = file.readline().strip()
+
+            # txt_data = utilitys.read_data_from_file()
+            # if 'file path' in txt_data:
+            #     UPLOAD_FOLDER = txt_data['file path']
+
+            # app.config['UPLOAD_FOLDER'] = dir_name
+            # # Create a folder to save images if it doesn't exist
+            # os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            #
+            # fileUpload = models.FileUpload()
+            # print(item.DateOfTransaction)
+
+            # datetime_obj = datetime.strptime(item["DateOfTransaction"], "%Y-%m-%d %H:%M:%S")
+            #
+            # # Format the datetime object into the desired format
+            # timestamp = datetime_obj.strftime("%Y-%m-%d%H%M")
+            # # timestamp = datetime.strptime(item["DateOfTransaction"], "%Y-%m-%d%H:%M")
+            # # timestamp = (item.DateOfTransaction).strftime("%Y-%m-%d%H%M")
+            #
+            # # Save the number plate image
+            # fileUpload.FileName = f"NP_{result}_{timestamp}.jpg"
+            # fileUpload.Base64Content = request.form["number_plate"]
+            # itemImage["NumberPlateImage"] = utilitys.save_image(fileUpload)
+            #
+            # # Save the vehicle image
+            # fileUpload.FileName = f"VI_{result}_{timestamp}.jpg"
+            # fileUpload.Base64Content = request.form["vehicle_image"]
+            # itemImage["VehicleImage"] = utilitys.save_image(fileUpload)
+
+            # insert_images(itemImage)
+
+            itemImage = {
+                "VehicleTransactionId": result,"NumberPlateImage":NumberPlateImage ,"VehicleImage":VehicleImage
+            }
+
+            insert_images(itemImage)
+
+            # res.message = "succ"
+            # return jsonify(res.dict)
+            # return jsonify({"message": "succ"})
+            return redirect(url_for('index'))
+
+        ##################################################################################################
+
+    return redirect(url_for('index'))
+
+
+
+
+
+# @app.route('/captured_images/<path:filename>')
+# def captured_image(filename):
+#     return send_from_directory(dir_name, filename)
+
 @app.route('/')
 def index():
-    # You can pass data to the template as keyword arguments
+    return render_template('index.html')
 
-    return send_from_directory(templatefolder,'livefeed.html')
+
+###########################################################################################################################
+
 
 
 @app.route('/api/Vehicle/gettransactionintimespan', methods=['GET'])

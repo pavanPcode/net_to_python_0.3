@@ -1,0 +1,36 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Video Feed</title>
+    <style>
+        .cont{
+           display: flex;
+           flex-direction: row;
+          }
+        </style>
+</head>
+<body>
+
+    <label class="control-label" style="border: thin red solid;">Live Video Feed</label>
+<input type="button" class="click" id="click" value="Click" style="width: 45px; height: 20px; text-align: center; color: white; background: #23b7e5; font-size: 13px; border-color: #23b7e5; border-radius:2px; padding: 0px; ">
+
+
+
+
+
+    <div id="cont">
+        <h1>Live Video Feed</h1>
+        <form action="/capture">
+            <table><tr><td>&nbsp;</td><td align="right"><input type="submit" value="CAPTURE IMAGE" style="background-color:red;color:white;font-size:20px;"></td></tr>
+            <tr><td colspan="2">
+                <img src="{{ url_for('video_feed') }}" alt="Live Video Stream" style="max-width: 100%; height: auto;">
+            </td></tr>
+            </table>
+
+        </form>
+    </div>
+
+
+</body>
+</html>

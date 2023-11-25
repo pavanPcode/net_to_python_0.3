@@ -1,7 +1,7 @@
 import os
 # import base64
 from datetime import datetime
-from flask import Flask, request, jsonify,render_template,send_from_directory
+from flask import Flask, request, jsonify,render_template,send_from_directory,request
 # from werkzeug.utils import secure_filename
 #from db_mssql import insert_data_VehicleTransaction,insert_images,delete_old_records,GetPrevTransactionDetails,dbgetlasttransaction
 #import db_mysql
@@ -12,7 +12,19 @@ import socket
 import logging
 import sys
 from all_sql_quarys import *
+from flask_socketio import SocketIO
+import cv2
+import base64
+import requests
+from engineio.async_drivers import gevent
+
+
+
+
 app = Flask(__name__)
+# socketio = SocketIO(app)
+socketio = SocketIO(app)
+
 
 
 
@@ -22,12 +34,13 @@ txt_data = utilitys.read_data_from_file()
 if 'log_path' in txt_data:
     log_path = txt_data['log_path']
 if 'port' in txt_data:
-    port_num = txt_data['port']
+    port_num = int(txt_data['port'])
 if 'host' in txt_data:
     host_add = txt_data['host']
 if 'templatefolder' in txt_data:
     templatefolder = txt_data['templatefolder']
-
+if 'rtsp_camera_url' in txt_data:
+    rtsp_camera_url = txt_data['rtsp_camera_url']
 
 
 # Redirect Flask's output to a file
@@ -37,11 +50,104 @@ sys.stderr = log_file
 
 #############################################################################################################################################
 
+# @app.route('/')
+# def index():
+#     # You can pass data to the template as keyword arguments
+#
+#     return send_from_directory(templatefolder,'livefeed.html')
+
 @app.route('/')
 def index():
-    # You can pass data to the template as keyword arguments
+    return send_from_directory(templatefolder,'index1.html')
 
-    return send_from_directory(templatefolder,'livefeed.html')
+
+def generate_frames():
+    # IP camera URL
+    # camera_url = "rtsp://admin:intozi@123@192.168.0.63/live"
+    camera_url = rtsp_camera_url
+
+    # Initialize the camera capture
+    cap = cv2.VideoCapture(camera_url)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Encode the frame as JPEG
+        _, buffer = cv2.imencode('.jpg', frame)
+
+        # Convert the frame to base64 for sending over WebSocket
+        frame_base64 = base64.b64encode(buffer).decode('utf-8')
+
+        # Send the frame to the client via WebSocket
+        socketio.emit('frame', frame_base64)
+
+# # Route to save captured images
+# @app.route('/save_image', methods=['POST'])
+# def save_image():
+#     global captured_image_base64
+#     data = request.get_json()
+#
+#     # Create a folder to store captured images if it doesn't exist
+#     if not os.path.exists("captured_images"):
+#         os.makedirs("captured_images")
+#
+#     captured_image_base64 = None  # Variable to store the captured image
+#
+#
+#     if 'image_base64' in data:
+#         captured_image_base64 = data['image_base64']
+#         # Generate a unique filename (you can customize this)
+#         filename = os.path.join("captured_images", "captured_image.jpg")
+#
+#
+#         # Decode the base64 image data and save it as a JPEG file
+#         with open(filename, "wb") as f:
+#             f.write(base64.b64decode(captured_image_base64))
+#
+#         return "Image saved successfully"
+#     else:
+#         return "Image not provided"
+
+
+# Route to save captured images
+@app.route('/save_image', methods=['POST'])
+def save_image():
+    global captured_image_base64
+    data = request.get_json()
+    captured_image_base64 = None  # Variable to store the captured image
+
+
+    if 'image_base64' in data:
+        captured_image_base64 = data['image_base64']
+
+        url = f'http://{host_add}:{port_num}/api/vehicle/onpremiseouttransaction'
+
+        current_datetime = datetime.now()
+        formatted_datetime = current_datetime.strftime('%Y-%m-%d %H:%M:%S')
+
+        # Data to be sent in the form
+        data = {
+            'vehicle_number': 'N/A-123456',
+            'vehicle_image': captured_image_base64,
+            'number_plate': captured_image_base64,
+            'device_name': 'ANPR',
+            'visited_datetime': formatted_datetime,
+            'isCaptured' : 1
+        }
+
+        # Send the POST request with form data
+        response = requests.post(url, data=data)
+
+        if response.status_code == 200:
+            return "Image saved successfully"
+        else:
+            return "Image not provided"
+    else:
+        return "Image not provided"
+
+
 
 
 @app.route('/api/Vehicle/gettransactionintimespan', methods=['GET'])
@@ -154,6 +260,13 @@ def onpremiseouttransaction():
     #res = models.ResultStringModel()
     vehNumber = request.form["vehicle_number"]
 
+    vehicle_number = request.form.get("isCaptured")
+    if vehicle_number is not None:
+        isCaptured = int(request.form["isCaptured"])
+    else:
+        # The "vehicle_number" form field does not exist in the form data
+        isCaptured = 0
+
     imageOperations = models.ImageOperations()
 
     if not imageOperations.IsBase64(request.form["number_plate"]) or not imageOperations.IsBase64(request.form["vehicle_image"]):
@@ -175,7 +288,8 @@ def onpremiseouttransaction():
         "Status": 2,
         "IsActive": True,
         "IsPushed": True,
-        "VehiclePlateNo": vehNumber
+        "VehiclePlateNo": vehNumber,
+        "isCaptured" : isCaptured
     }
 
     #result = insert_data_into_sql_server(item)
@@ -388,5 +502,8 @@ def getLastTramsactionsByVehicle():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port=port_num)
+    #app.run(host=host_add,port=port_num)
+    # Start streaming the video frames when the application starts
+    socketio.start_background_task(generate_frames)
+    socketio.run(app,host='0.0.0.0',port=port_num,allow_unsafe_werkzeug=True)
 
